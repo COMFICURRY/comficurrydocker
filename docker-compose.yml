@@ -1,0 +1,86 @@
+# Docker Compose file Reference (https://docs.docker.com/compose/compose-file/)
+version: '3.8'
+
+# Define services
+services:
+  # App backend service
+  app-server:
+    # Configuration for building the docker image for the backend service
+   
+      
+    image: comficurry/dockercompose_app-server
+    ports:
+      - "8080:8080" # Forward the exposed port 8080 on the container to port 8080 on the host machine
+    restart: always
+    depends_on: 
+      - db # This service depends on postgress. Start that first.
+    # Pass environment variables to the service
+    environment:
+      - SPRING_DATASOURCE_URL=jdbc:postgresql://db:5432/comficurry
+      - SPRING_DATASOURCE_USERNAME=compose-postgres
+      - SPRING_DATASOURCE_PASSWORD=PostGress@1
+      - SPRING_JPA_HIBERNATE_DDL_AUTO=update
+  
+  
+    
+    networks: # Networks to join (Services on the same network can communicate with each other using their name)
+      - backend
+      - frontend
+
+  # Frontend Service 
+  app-client: 
+    
+      
+   
+    image: comficurry/dockercompose_react-app
+    ports:
+      - "9090:80" # Forward the exposed port 80 on the container to port 80 on the host machine
+    restart: always
+    depends_on:
+      - app-server
+    networks:
+      - frontend  
+
+  # Database Service (Postgress)
+  db:
+    image: postgres:13.2-alpine
+    ports:
+      - "5432:5432"
+   # container_name: db
+    environment:
+      - POSTGRES_USER=compose-postgres
+      - POSTGRES_PASSWORD=PostGress@1
+      - POSTGRES_DB=comficurry
+    
+    networks:
+      - backend  
+# Volumes
+
+  #pgbackups:
+   #image: comficurry/postgres-backup:13.2-alpine
+   #restart: always
+   #user: postgres:postgres
+  # volumes:
+     #- /var/opt/pgbackups:/backups
+ #  links:
+   #  - db
+  # depends_on:
+    # - db
+ #  environment:
+    # - POSTGRES_HOST=postgres
+   #  - POSTGRES_DB=Aashirwadh
+    # - POSTGRES_USER=compose-postgres
+    # - POSTGRES_PASSWORD=PostGress@1
+         #  - POSTGRES_PASSWORD_FILE=/run/secrets/db_password <-- alternative for POSTGRES_PASSWORD (to use with docker secrets)
+    # - POSTGRES_EXTRA_OPTS=-Z6 --schema=public --blobs
+   #  - SCHEDULE=@midnight
+   #  - BACKUP_KEEP_DAYS=7
+    # - BACKUP_KEEP_WEEKS=4
+    # - BACKUP_KEEP_MONTHS=6
+    # - HEALTHCHECK_PORT=8080 
+ 
+# Networks to be created to facilitate communication between containersnetworks:
+networks:
+  backend:
+  frontend:    
+
