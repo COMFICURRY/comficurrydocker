@@ -31,9 +31,7 @@ services:
   app-client: 
     
       
-    build:
-     args:
-        REACT_APP_API_BASE_URL: http://127.0.0.1:8080/status
+ 
     image: comficurry/dockercompose_react-app
     ports:
       - "9090:80" # Forward the exposed port 80 on the container to port 80 on the host machine
