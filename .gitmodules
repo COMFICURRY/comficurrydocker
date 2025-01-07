@@ -1,9 +1,4 @@
-[submodule "comficurryapis"]
-	path = comficurryapis
-	url = https://github.com/COMFICURRY/comficurryapi.git
-[submodule "comficurryaaminapps"]
-	path = comficurryaaminapps
-	url = https://github.com/COMFICURRY/comficurryaaminapp.git
+
 [submodule "comficurryaaminapp"]
 	path = comficurryaaminapp
 	url = https://github.com/COMFICURRY/comficurryaaminapp.git
