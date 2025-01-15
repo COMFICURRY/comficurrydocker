@@ -32,7 +32,7 @@ services:
     
       
  
-    image: comficurry/dockercompose_react-app
+    image: comficurry/dockercompose_app-client
     ports:
       - "9090:80" # Forward the exposed port 80 on the container to port 80 on the host machine
     restart: always
