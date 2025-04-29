@@ -1,4 +1,4 @@
-# Docker Compose file Reference (https://docs.docker.com/compose/compose-file/)
+# Docker Compose file Reference (https://docs.docker.com/compose/compose-file/)available option
 version: '3.8'
 
 # Define services
@@ -44,8 +44,25 @@ services:
     depends_on:
       - app-server
     networks:
-      - frontend  
+      - frontend
+      
+  # Frontend Service 
+  main-app-client: 
+    build:
+      context: comficurryapp # Use an image built from the specified dockerfile in the `react-app-client` directory.
+      dockerfile: Dockerfile
+    
+      args:
+        REACT_MAIN_APP_BASE_URL: http://127.0.0.1:1234
 
+    image: comficurry/dockercompose_main_app-client
+    ports:
+      - "9091:80" # Forward the exposed port 80 on the container to port 80 on the host machine
+    restart: always
+    depends_on:
+      - app-server
+    networks:
+      - frontend  
   # Database Service (Postgress)
   db:
     image: postgres:13.2-alpine
