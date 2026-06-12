@@ -1,0 +1,93 @@
+# ComfiCurry local development stack.
+#
+# Expects the app repos cloned as SIBLINGS of this repo:
+#   workspace/
+#     comficurryapi/
+#     comficurryaaminapp/
+#     comficurryapp/
+#     comficurrydocker/   <- this repo
+#
+# Usage (from the workspace root or this folder):
+#   docker compose -f comficurrydocker/docker-compose.dev.yml up -d --build
+#
+# URLs once up:
+#   API:          http://localhost:8080
+#   Admin app:    http://localhost:9090
+#   Customer app: http://localhost:9091
+#   Postgres:     localhost:5432 (postgres/root, db: comficurry)
+#
+# LINE credentials are only needed when testing LINE publishing — export
+# LINE_CHANNEL_TOKEN / LINE_CHANNEL_SECRET in your shell before `up`.
+
+services:
+  db:
+    image: postgres:13.2-alpine
+    ports:
+      - "5432:5432"
+    environment:
+      - POSTGRES_USER=postgres
+      - POSTGRES_PASSWORD=root
+      - POSTGRES_DB=comficurry
+    volumes:
+      - db-data:/var/lib/postgresql/data
+    networks:
+      - backend
+
+  app-server:
+    build:
+      context: ../comficurryapi
+      dockerfile: Dockerfile
+    image: comficurry/app-server:dev
+    ports:
+      - "8080:8080"
+    restart: unless-stopped
+    depends_on:
+      - db
+    environment:
+      - SPRING_DATASOURCE_URL=jdbc:postgresql://db:5432/comficurry
+      - SPRING_DATASOURCE_USERNAME=postgres
+      - SPRING_DATASOURCE_PASSWORD=root
+      - SPRING_JPA_HIBERNATE_DDL_AUTO=update
+      - LINE_CHANNEL_TOKEN=${LINE_CHANNEL_TOKEN:-dev-placeholder-token}
+      - LINE_CHANNEL_SECRET=${LINE_CHANNEL_SECRET:-dev-placeholder-secret}
+      - JWT_SECRET_KEY=${JWT_SECRET_KEY:-}
+    networks:
+      - backend
+      - frontend
+
+  admin-client:
+    build:
+      context: ../comficurryaaminapp
+      dockerfile: Dockerfile
+      args:
+        REACT_APP_API_URL: http://localhost:8080
+    image: comficurry/admin-client:dev
+    ports:
+      - "9090:80"
+    restart: unless-stopped
+    depends_on:
+      - app-server
+    networks:
+      - frontend
+
+  customer-client:
+    build:
+      context: ../comficurryapp
+      dockerfile: Dockerfile
+      args:
+        REACT_APP_API_URL: http://localhost:8080
+    image: comficurry/customer-client:dev
+    ports:
+      - "9091:80"
+    restart: unless-stopped
+    depends_on:
+      - app-server
+    networks:
+      - frontend
+
+volumes:
+  db-data:
+
+networks:
+  backend:
+  frontend:
