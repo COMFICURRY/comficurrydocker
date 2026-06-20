@@ -1,0 +1,100 @@
+# ComfiCurry PROTOTYPE deployment — everything on one VM (Path B).
+#
+# Runs: Postgres + API + Admin app + Customer app (guest-login build).
+# Expects the four repos cloned as SIBLINGS of this one:
+#   workspace/
+#     comficurryapi/  comficurryaaminapp/  comficurryapp/  comficurrydocker/
+#
+# Usage (from this folder):
+#   cp .env.prod.example .env      # then edit PUBLIC_API_URL etc.
+#   docker compose -f docker-compose.prod.yml up -d --build
+#
+# After it's up (replace HOST with the VM's public IP / domain):
+#   Customer app:  http://HOST/            (guest login — order without LINE)
+#   Admin app:     http://HOST:8090/
+#   API:           http://HOST:8080/
+#
+# IMPORTANT: PUBLIC_API_URL is baked into the frontends at BUILD time, so it
+# MUST be the VM's reachable API URL (e.g. http://<VM_IP>:8080) before building.
+# This is a PROTOTYPE config: the API is open, the order cut-off is disabled,
+# and guest login is on. Not for production / real customer data.
+
+services:
+  db:
+    image: postgres:13.2-alpine
+    restart: unless-stopped
+    environment:
+      - POSTGRES_USER=${POSTGRES_USER}
+      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD}
+      - POSTGRES_DB=${POSTGRES_DB}
+    volumes:
+      - db-data:/var/lib/postgresql/data
+    networks:
+      - backend
+    # Not published to the host — only the API reaches it over the backend network.
+
+  app-server:
+    build:
+      context: ../comficurryapi
+      dockerfile: Dockerfile
+    image: comficurry/app-server:prod
+    restart: unless-stopped
+    depends_on:
+      - db
+    ports:
+      - "8080:8080"
+    environment:
+      - SPRING_DATASOURCE_URL=jdbc:postgresql://db:5432/${POSTGRES_DB}
+      - SPRING_DATASOURCE_USERNAME=${POSTGRES_USER}
+      - SPRING_DATASOURCE_PASSWORD=${POSTGRES_PASSWORD}
+      - SPRING_JPA_HIBERNATE_DDL_AUTO=update
+      - LINE_CHANNEL_TOKEN=${LINE_CHANNEL_TOKEN:-prototype-placeholder-token}
+      - LINE_CHANNEL_SECRET=${LINE_CHANNEL_SECRET:-prototype-placeholder-secret}
+      - JWT_SECRET_KEY=${JWT_SECRET_KEY}
+      # Prototype: let the CEO place orders at any time of day.
+      - ORDERING_ENFORCE_WINDOW=false
+    volumes:
+      # Persist uploaded customer photos AND payment slips across restarts.
+      - uploads:/src/images
+    networks:
+      - backend
+      - frontend
+
+  admin-client:
+    build:
+      context: ../comficurryaaminapp
+      dockerfile: Dockerfile
+      args:
+        REACT_APP_API_URL: ${PUBLIC_API_URL}
+    image: comficurry/admin-client:prod
+    restart: unless-stopped
+    depends_on:
+      - app-server
+    ports:
+      - "8090:80"
+    networks:
+      - frontend
+
+  customer-client:
+    build:
+      context: ../comficurryapp
+      dockerfile: Dockerfile
+      args:
+        REACT_APP_API_URL: ${PUBLIC_API_URL}
+        REACT_APP_GUEST: "true"
+    image: comficurry/customer-client:prod
+    restart: unless-stopped
+    depends_on:
+      - app-server
+    ports:
+      - "80:80"
+    networks:
+      - frontend
+
+volumes:
+  db-data:
+  uploads:
+
+networks:
+  backend:
+  frontend:
